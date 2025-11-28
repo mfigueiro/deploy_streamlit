@@ -2,14 +2,19 @@ import streamlit as st
 import pandas as pd
 from google.cloud import firestore
 from google.oauth2 import service_account
-import json
 
 # ================================
 # Load Firebase Credentials
 # ================================
-key_dict = json.loads(st.secrets["textkey"])
+# st.secrets["textkey"] is already a dict because secrets.toml uses TOML
+
+# ================================
+# Load Firebase Credentials
+# ================================
+key_dict = st.secrets["textkey"]
+
 creds = service_account.Credentials.from_service_account_info(key_dict)
-db = firestore.Client(credentials=creds, project="names-project-demo")
+db = firestore.Client(credentials=creds, project=key_dict["project_id"])
 
 dbNames = db.collection("names")
 
@@ -38,7 +43,7 @@ if index and name and sex and submit:
 # Helper: Load name by 'name'
 # ================================
 def loadByName(name):
-    names_ref = dbNames.where(u"name", u"==", name)
+    names_ref = dbNames.where("name", "==", name)
     currentName = None
     for myname in names_ref.stream():
         currentName = myname
@@ -88,16 +93,14 @@ if btnActualizar:
         st.write(f"{nameSearch} no existe")
     else:
         myupdatename = dbNames.document(updatename.id)
-        myupdatename.update({
-            "name": newname
-        })
+        myupdatename.update({"name": newname})
 
 
 # ================================
 # Show full collection
 # ================================
-names_ref = list(db.collection(u"names").stream())
-names_dict = list(map(lambda x: x.to_dict(), names_ref))
+names_ref = list(db.collection("names").stream())
+names_dict = [x.to_dict() for x in names_ref]
 names_dataframe = pd.DataFrame(names_dict)
 
 st.dataframe(names_dataframe)
